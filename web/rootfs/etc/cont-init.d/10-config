@@ -11,7 +11,9 @@ mkdir -p \
 if [[ $DISABLE_HTTPS -ne 1 ]]; then
     if [[ $ENABLE_LETSENCRYPT -eq 1 ]]; then
         if [[ ! -f /etc/letsencrypt/live/$LETSENCRYPT_DOMAIN/fullchain.pem ]]; then
-            if ! certbot certonly \
+            if ! certbot-auto \
+                  certonly \
+                  --no-self-upgrade \
                   --noninteractive \
                   --standalone \
                   --preferred-challenges http \
@@ -47,9 +49,6 @@ if [[ $DISABLE_HTTPS -ne 1 ]]; then
             openssl req -new -x509 -days 3650 -nodes -out /config/keys/cert.crt -keyout /config/keys/cert.key -subj "$SUBJECT"
         fi
     fi
-    if [[ ! -f /config/nginx/dhparams.pem ]]; then
-        openssl dhparam -out /config/nginx/dhparams.pem 2048
-    fi
 fi
 
 # copy config files
@@ -70,10 +69,11 @@ if [[ ! -f /config/nginx/site-confs/default ]]; then
 fi
 
 if [[ ! -f /config/config.js ]]; then
-    cp /defaults/config.js /config/config.js
+    cat /defaults/deepmerge.js /defaults/config.js > /config/config.js
+
     sed -i \
         -e "s#jitsi-meet.example.com#$XMPP_DOMAIN#g" \
-        -e "s#bosh:.*#bosh: '${PUBLIC_URL}/http-bind',#" \
+        -e "s#bosh:.*#bosh: '/http-bind',#" \
         -e "s#muc:.*#muc: '${XMPP_MUC_DOMAIN}',#" \
         -e "s#// focusUserJid:.*#focusUserJid: '${JICOFO_AUTH_USER}@${XMPP_AUTH_DOMAIN}',#" \
         /config/config.js
@@ -109,6 +109,13 @@ if [[ ! -f /config/config.js ]]; then
              -e "s#// transcribingEnabled:.*#transcribingEnabled: true,#" \
              /config/config.js
     fi
+
+    if [[ ! -z "${CONFIG_JSON}" ]]; then
+        echo ""
+        echo "// base64 encoded CONFIG_JSON"
+        echo "var customConfig = JSON.parse('${CONFIG_JSON//"'"/"\'"}');" >> /config/config.js
+        echo "config = deepmerge(config, customConfig, { arrayMerge: function (destinationArray, sourceArray, options) { return sourceArray }});" >> /config/config.js
+    fi
 fi
 
 if [[ ! -f /config/interface_config.js ]]; then
@@ -122,4 +129,10 @@ if [[ ! -f /config/interface_config.js ]]; then
             /config/interface_config.js
     fi
 
+    if [[ ! -z "${INTERFACE_CONFIG_JSON}" ]]; then
+        echo ""
+        echo "// base64 encoded INTERFACE_CONFIG_JSON"
+        echo "var customInterfaceConfig = JSON.parse('${INTERFACE_CONFIG_JSON//"'"/"\'"}');" >> /config/interface_config.js
+        echo "interfaceConfig = deepmerge(interfaceConfig, customInterfaceConfig, { arrayMerge: function (destinationArray, sourceArray, options) { return sourceArray }});" >> /config/interface_config.js
+    fi
 fi

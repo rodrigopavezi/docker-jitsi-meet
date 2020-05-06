@@ -55,12 +55,12 @@ or to use jigasi too: ``docker-compose -f docker-compose.yml -f jigasi.yml -f ji
 
 ### Security note
 
-This setup used to have default passwords for intetrnal accounts used across components. In order to make the default setup
+This setup used to have default passwords for internal accounts used across components. In order to make the default setup
 secure by default these have been removed and the respective containers won't start without having a password set.
 
-Strong passwordds may be generated as follows: `./gen-passwords.sh`
-This will modify your `.env` file (a backup is saved in `.env.backup`) and set strong passwords for each of the
-require options. Passwords are  generated using `openssl rand -hex 16` .
+Strong passwords may be generated as follows: `./gen-passwords.sh`
+This will modify your `.env` file (a backup is saved in `.env.bak`) and set strong passwords for each of the
+required options. Passwords are generated using `openssl rand -hex 16` .
 
 DO NOT reuse any of the passwords.
 
@@ -142,8 +142,8 @@ Variable | Description | Example
 `DOCKER_HOST_ADDRESS` | IP address of the Docker host, needed for LAN environments | 192.168.1.1
 `PUBLIC_URL` | Public URL for the web service | https://meet.example.com
 
-**NOTE**: The mobile apps won't work with self-signed certificates (the default)
-see below for instructions on how to obtain a proper certificate with Let's Encrypt.
+**NOTE**: The mobile apps won't work with self-signed certificates (the default).
+See below for instructions on how to obtain a proper certificate with Let's Encrypt.
 
 ### Let's Encrypt configuration
 
@@ -171,7 +171,7 @@ Variable | Description | Example
 `JIGASI_SIP_PORT` | SIP server port | 5060
 `JIGASI_SIP_TRANSPORT` | SIP transport | UDP
 
-### JItsi BRoadcasting Infrastructure configuration
+### JItsi BRoadcasting Infrastructure (Jibri) configuration
 
 Before running Jibri, you need to set up an ALSA loopback device on the host. This **will not**
 work on a non-Linux host.
@@ -202,8 +202,19 @@ echo "snd-aloop" >> /etc/modules
 lsmod | grep snd_aloop
 ```
 
-NOTE: if you are running on AWS you may need to reboot your machine to use the generic kernel instead
-of the "aws" kernel.
+NOTE: If you are running on AWS you may need to reboot your machine to use the generic kernel instead
+of the "aws" kernel. If after reboot, your machine is still using the "aws" kernel, you'll need to manually update the grub file. So just run:
+```
+# open the grub file in editor
+nano /etc/default/grub
+# Modify the value of GRUB_DEFAULT from "0" to "1>2"
+# Save and exit from file
+
+# Update grub
+update-grub
+# Reboot the machine
+reboot now
+```
 
 If you want to enable Jibri these options are required:
 
@@ -245,7 +256,7 @@ For using multiple Jibri instances, you have to select different loopback interf
   ...
   ```
 
-  For setup the second instance, run container with changed `/home/jibri/.asoundrc`:
+  To setup the second instance, run container with changed `/home/jibri/.asoundrc`:
 
   ```
   ...
@@ -407,6 +418,7 @@ Variable | Description | Default value
 `XMPP_INTERNAL_MUC_MODULES` | Custom Prosody modules for internal MUC component (comma separated) | info,alert
 `GLOBAL_MODULES` | Custom prosody modules to load in global configuration (comma separated) | statistics,alert
 `GLOBAL_CONFIG` | Custom configuration string with escaped newlines | foo = bar;\nkey = val;
+`RESTART_POLICY` | Container restart policy | defaults to `unless-stopped`
 `JICOFO_COMPONENT_SECRET` | XMPP component password for Jicofo | s3cr37
 `JICOFO_AUTH_USER` | XMPP user for Jicofo client connections | focus
 `JICOFO_AUTH_PASSWORD` | XMPP password for Jicofo client connections | passw0rd
@@ -416,6 +428,7 @@ Variable | Description | Default value
 `JVB_PORT` | UDP port for media used by Jitsi Videobridge | 10000
 `JVB_TCP_HARVESTER_DISABLED` | Disable the additional harvester which allows video over TCP (rather than just UDP) | true
 `JVB_TCP_PORT` | TCP port for media used by Jitsi Videobridge when the TCP Harvester is enabled | 4443
+`JVB_TCP_MAPPED_PORT` | TCP port advertised by Jitsi Videobridge | 4443
 `JVB_BREWERY_MUC` | MUC name for the JVB pool | jvbbrewery
 `JVB_ENABLE_APIS` | Comma separated list of JVB APIs to enable | none
 `JIGASI_XMPP_USER` | XMPP user for Jigasi MUC client connections | jigasi
@@ -433,6 +446,8 @@ Variable | Description | Default value
 `DISABLE_HTTPS` | Handle TLS connections outside of this setup | 1
 `ENABLE_HTTP_REDIRECT` | Redirect HTTP traffic to HTTPS (necessary for Let's Encrypt) | 1
 `LOG_LEVEL` | Controls which logs are output from prosody and associated modules | info
+`CONFIG_JSON` | Override config properties. Value must be a valid JSON. Will be merged with [defaults](https://github.com/jitsi/jitsi-meet/blob/master/config.js) | none
+`INTERFACE_CONFIG_JSON` | Override interfaceConfig properties. Value must be a valid JSON. Will be merged with [defaults](https://github.com/jitsi/jitsi-meet/blob/master/interface_config.js) | none
 
 ### Running behind NAT or on a LAN environment
 
